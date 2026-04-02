@@ -46,6 +46,8 @@ if "model" not in st.session_state:
     with open(model_path, "rb") as f:
         st.session_state.model = pickle.load(f)
 
+model = st.session_state.get("model", None)
+
 # ---------------- FUNCTIONS ----------------
 def predict(model, x):
     z = np.dot(x, model)
@@ -179,7 +181,10 @@ elif st.session_state.page == "Prediction":
     predict_btn = st.button("Run Prediction")
 
     if predict_btn:
-        prob = predict(model, x)
+        if model is None:
+         st.error("Model not loaded. Please refresh.")
+        else:
+         prob = predict(model, x)
 
         if prob > 0.5:
             st.error(f"High Risk ({prob:.2f})")
