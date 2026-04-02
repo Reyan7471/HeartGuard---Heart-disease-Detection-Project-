@@ -36,11 +36,15 @@ section[data-testid="stSidebar"] {{
 """, unsafe_allow_html=True)
 
 # ---------------- MODEL ----------------
-if "model" not in st.session_state:
-    with open("models/trained_model.pkl", "rb") as f:
-        st.session_state.model = pickle.load(f)
 
-model = st.session_state.model
+import os
+
+if "model" not in st.session_state:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    model_path = os.path.join(BASE_DIR, "models", "trained_model.pkl")
+
+    with open(model_path, "rb") as f:
+        st.session_state.model = pickle.load(f)
 
 # ---------------- FUNCTIONS ----------------
 def predict(model, x):
