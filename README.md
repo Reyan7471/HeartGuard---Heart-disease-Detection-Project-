@@ -5,7 +5,7 @@ A fully manual machine learning system for predicting heart disease risk, built 
 🔗 Live Application
 
 👉 Try the app here:
-🔗 Open HeartGuard App
+ https://heartguard-app.streamlit.app/
 
 ⚠️ This application is intended for educational purposes and should not be used as a substitute for professional medical advice.
 
