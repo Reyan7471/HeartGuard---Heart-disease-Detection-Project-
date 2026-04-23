@@ -14,12 +14,94 @@ if "page" not in st.session_state:
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
-body { background-color: #121212; color: white; }
-section[data-testid="stSidebar"] { background-color: #000000; }
-.stButton button {
-    background-color: #1db954;
+.stApp {
+    background: linear-gradient(to bottom, #121212, #0a0a0a);
+    color: white;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #000000;
+}
+
+/* Button container */
+div.stButton {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+/* Default button */
+div.stButton > button {
+    width: 100%;
+    text-align: center;
+    background-color: #2a2a2a;
     color: white;
     border-radius: 20px;
+    padding: 12px;
+    font-weight: 600;
+    border: none;
+    transition: 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+/* Hover */
+div.stButton > button:hover {
+    background-color: #3a3a3a;
+}
+
+/* Active left bar */
+.active-btn {
+    background-color: #d1d1d1 !important;
+    color: black !important;
+    font-weight: 700 !important;
+    border-left: 4px solid #1db954 !important;
+}
+
+/* Force all buttons same style */
+button[kind="primary"],
+button[kind="secondary"] {
+    background-color: #2a2a2a !important;
+    color: white !important;
+}
+
+button[kind="primary"]:hover,
+button[kind="secondary"]:hover {
+    background-color: #3a3a3a !important;
+}
+
+/* Cards */
+.card {
+    background: #181818;
+    padding: 18px 20px;
+    border-radius: 10px;
+    border: 1px solid #2a2a2a;
+    margin-bottom: 12px;
+    min-height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: 0.2s ease;
+}
+.card:hover {
+    border: 1px solid #555;
+    transform: translateY(-2px);
+}
+
+.card-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.card-text {
+    font-size: 15px;
+    color: #cfcfcf;
+    line-height: 1.5;
+}
+
+.divider {
+    border-top: 1px solid #2a2a2a;
+    margin: 20px 0;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -28,93 +110,105 @@ section[data-testid="stSidebar"] { background-color: #000000; }
 if "model" not in st.session_state:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     model_path = os.path.join(BASE_DIR, "models", "trained_model.pkl")
-
     with open(model_path, "rb") as f:
         st.session_state.model = pickle.load(f)
 
 model = st.session_state.get("model", None)
 
-# ---------------- FUNCTIONS ----------------
+# ---------------- FUNCTION ----------------
 def predict(model, x):
-    z = np.dot(x, model)
-    return 1 / (1 + np.exp(-z))
-
-# -------- FIXED SHAP --------
-def shap_explain(model, x):
-    baseline = np.mean(x) * np.ones(len(x))
-    shap_vals = []
-
-    base_pred = predict(model, baseline)
-
-    for i in range(len(x)):
-        temp = baseline.copy()
-        temp[i] = x[i]
-        shap_vals.append(predict(model, temp) - base_pred)
-
-    return np.array(shap_vals)
-
-# -------- FIXED LIME --------
-def lime_explain(model, x):
-    n = len(x)
-
-    scale = np.std(x) + 1e-5
-    samples = x + np.random.normal(0, scale, (200, n))
-
-    preds = np.array([predict(model, s) for s in samples])
-
-    distances = np.linalg.norm(samples - x, axis=1)
-    weights = np.exp(-(distances**2) / (2 * scale**2))
-
-    X_b = np.c_[np.ones(samples.shape[0]), samples]
-    W = np.diag(weights)
-
-    theta = np.linalg.pinv(X_b.T @ W @ X_b) @ X_b.T @ W @ preds
-
-    return theta[1:]
-
-# ---------------- FEATURES ----------------
-feature_labels = [
-    "Age","Gender","Chest Pain","Blood Pressure","Cholesterol",
-    "Blood Sugar","ECG","Heart Rate","Exercise Pain",
-    "Stress Level","Slope","Blocked Arteries","Heart Test"
-]
+    return 1 / (1 + np.exp(-np.dot(x, model)))
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
-    st.title("HeartGuard")
+    st.markdown("<h2 style='font-size:28px; margin-bottom:10px;'>Menu</h2>", unsafe_allow_html=True)
+    st.markdown("---")
 
-    if st.button("Home"):
+    b1 = st.button("Home", use_container_width=True)
+    b2 = st.button("Prediction", use_container_width=True)
+    b3 = st.button("Bulk Scanner", use_container_width=True)
+
+    if b1:
         st.session_state.page = "Home"
-    if st.button("Prediction"):
+    if b2:
         st.session_state.page = "Prediction"
-    if st.button("Insights"):
-        st.session_state.page = "Insights"
+    if b3:
+        st.session_state.page = "Bulk"
+
+    # Active highlight with left bar
+    if st.session_state.page == "Home":
+        st.markdown("<style>div.stButton:nth-of-type(1) > button {background:#d1d1d1;color:#000;border-left:4px solid #1db954;font-weight:700;}</style>", unsafe_allow_html=True)
+
+    elif st.session_state.page == "Prediction":
+        st.markdown("<style>div.stButton:nth-of-type(2) > button {background:#d1d1d1;color:#000;border-left:4px solid #1db954;font-weight:700;}</style>", unsafe_allow_html=True)
+
+    elif st.session_state.page == "Bulk":
+        st.markdown("<style>div.stButton:nth-of-type(3) > button {background:#d1d1d1;color:#000;border-left:4px solid #1db954;font-weight:700;}</style>", unsafe_allow_html=True)
 
 # ---------------- HOME ----------------
 if st.session_state.page == "Home":
 
-    st.title("Dashboard")
+    st.title("HeartGuard - Heart Disease Detection System")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Features", "13")
-    col2.metric("Model", "Custom ML")
-    col3.metric("Explainability", "SHAP + LIME")
-
-    st.markdown("---")
-    st.write("Use Prediction tab to assess patient risk.")
-
-# ---------------- PREDICTION ----------------
-elif st.session_state.page == "Prediction":
-
-    st.title("🫀 Heart Disease Risk Assessment")
+    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### 👤 Patient Profile")
+        st.markdown("""
+        <div class='card'>
+            <div class='card-title'>Overview</div>
+            <div class='card-text'>
+            Analyzes clinical data to predict heart disease risk.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    with col2:
+        st.markdown("""
+        <div class='card'>
+            <div class='card-title'>Workflow</div>
+            <div class='card-text'>
+            Patient data → Model → Risk score.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        st.markdown("""
+        <div class='card'>
+            <div class='card-title'>Use Case</div>
+            <div class='card-text'>
+            Supports individual and bulk data analysis.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        st.markdown("""
+        <div class='card'>
+            <div class='card-title'>Objective</div>
+            <div class='card-text'>
+            Enables early detection and preventive care decisions.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ---------------- PREDICTION ----------------
+elif st.session_state.page == "Prediction":
+
+    st.title("Heart Disease Risk Assessment")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("### Patient Profile")
+
         age = st.slider("Age", 20, 100, 50)
+        gender = st.radio("Gender", ["Male", "Female"])
+        sex = 1 if gender == "Male" else 0
 
         cp_dict = {
             "Typical Angina": 0,
@@ -124,32 +218,33 @@ elif st.session_state.page == "Prediction":
         }
         cp = cp_dict[st.selectbox("Chest Pain Type", list(cp_dict.keys()))]
 
-        trestbps = st.slider("Resting Blood Pressure", 80, 200, 120)
-        chol = st.slider("Cholesterol", 100, 400, 200)
-        fbs = st.toggle("Fasting Blood Sugar > 120")
+        trestbps = st.slider("Blood Pressure (mm Hg)", 80, 200, 120)
+        chol = st.slider("Cholesterol (mg/dl)", 100, 400, 200)
+        fbs = int(st.toggle("Fasting Blood Sugar > 120"))
 
     with col2:
-        st.markdown("### 🧪 Clinical Measurements")
+        st.markdown("### Clinical Measurements")
 
         restecg_dict = {
             "Normal": 0,
             "ST-T Abnormality": 1,
-            "Hypertrophy": 2
+            "Left Ventricular Hypertrophy": 2
         }
         restecg = restecg_dict[st.selectbox("ECG Result", list(restecg_dict.keys()))]
 
-        thalach = st.slider("Max Heart Rate", 60, 220, 150)
-        exang = st.toggle("Exercise Induced Angina")
-        oldpeak = st.slider("ST Depression", 0.0, 6.0, 1.0)
+        thalach = st.slider("Maximum Heart Rate", 60, 220, 150)
+        exang = int(st.toggle("Exercise Induced Angina"))
+
+        oldpeak = st.slider("ST Depression (Stress Level)", 0.0, 6.0, 1.0)
 
         slope_dict = {
             "Upsloping": 0,
             "Flat": 1,
             "Downsloping": 2
         }
-        slope = slope_dict[st.selectbox("Slope", list(slope_dict.keys()))]
+        slope = slope_dict[st.selectbox("Slope of ST Segment", list(slope_dict.keys()))]
 
-        ca = st.slider("Blocked Arteries", 0, 4, 0)
+        ca = st.slider("Number of Blocked Arteries", 0, 4, 0)
 
         thal_dict = {
             "Normal": 0,
@@ -159,99 +254,110 @@ elif st.session_state.page == "Prediction":
         }
         thal = thal_dict[st.selectbox("Thalassemia", list(thal_dict.keys()))]
 
-    sex = 1 if gender == "Male" else 0
-    fbs = int(fbs)
-    exang = int(exang)
+    x = np.array([age, sex, cp, trestbps, chol, fbs,
+                  restecg, thalach, exang, oldpeak, slope, ca, thal])
 
-    x = np.array([
-        age, sex, cp, trestbps, chol,
-        fbs, restecg, thalach, exang,
-        oldpeak, slope, ca, thal
-    ])
-
-    # -------- NORMALIZATION FIX --------
     x = (x - np.mean(x)) / (np.std(x) + 1e-5)
 
-    if st.button("🔍 Run Assessment"):
-
-        if model is None:
-            st.error("Model not loaded.")
-            st.stop()
-
+    if st.button("Run Assessment"):
         prob = predict(model, x)
 
-        # -------- NEW SECTION --------
-        st.markdown("---")
-        st.subheader("🩺 Possible Clinical Observations")
+        st.markdown("### Clinical Observations")
+        if age > 60: st.warning("Higher age increases heart risk")
+        if trestbps > 140: st.warning("High blood pressure detected")
+        if chol > 240: st.warning("High cholesterol level")
 
-        observations = []
-
-        if age > 60:
-            observations.append("Higher age may increase cardiovascular risk")
-        if trestbps > 140:
-            observations.append("Elevated blood pressure (Hypertension)")
-        if chol > 240:
-            observations.append("High cholesterol level detected")
-        if thalach < 100:
-            observations.append("Lower maximum heart rate")
-        if fbs == 1:
-            observations.append("High blood sugar (possible diabetes)")
-        if exang == 1:
-            observations.append("Exercise-induced chest pain")
-        if oldpeak > 2:
-            observations.append("High ST depression (cardiac stress)")
-        if ca > 0:
-            observations.append("Presence of blocked blood vessels")
-        if cp == 3:
-            observations.append("Asymptomatic chest pain (higher concern)")
-        if restecg in [1, 2]:
-            observations.append("Abnormal ECG readings")
-
-        if observations:
-            for obs in observations:
-                st.warning(f"• {obs}")
-        else:
-            st.success("No major clinical concerns detected")
-
-        # -------- ORIGINAL FLOW CONTINUES --------
-        st.markdown("---")
-        st.subheader("📊 Risk Result")
-
-        if prob < 0.3:
-            st.success(f"Low Risk ({prob:.2f}) 🟢")
-        elif prob < 0.7:
-            st.warning(f"Moderate Risk ({prob:.2f}) 🟡")
-        else:
-            st.error(f"High Risk ({prob:.2f}) 🔴")
-
+        st.markdown("### Risk Result")
+        st.write(f"Heart Disease Risk Score: {prob:.2f}")
         st.progress(float(prob))
 
-        df = pd.DataFrame({
-            "Class": ["No Disease", "Disease"],
-            "Probability": [1 - prob, prob]
+# ---------------- BULK SCANNER ----------------
+elif st.session_state.page == "Bulk":
+
+    st.title(" Bulk Scanner")
+    st.markdown("---")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("### 📄 Sample File")
+
+        sample_df = pd.DataFrame({
+            "age":[45,60],
+            "sex":[1,0],
+            "cp":[0,2],
+            "trestbps":[120,140],
+            "chol":[200,250],
+            "fbs":[0,1],
+            "restecg":[1,0],
+            "thalach":[150,130],
+            "exang":[0,1],
+            "oldpeak":[1.0,2.5],
+            "slope":[1,2],
+            "ca":[0,2],
+            "thal":[1,3]
         })
-        st.bar_chart(df.set_index("Class"))
 
-        shap_vals = shap_explain(model, x)
-        shap_df = pd.DataFrame({
-            "Feature": feature_labels,
-            "Impact": shap_vals
-        }).sort_values(by="Impact", key=abs, ascending=False)
+        format_type = st.selectbox("", ["CSV","Excel","JSON"])
 
-        st.subheader("SHAP Explanation")
-        st.bar_chart(shap_df.set_index("Feature"))
+        if format_type == "CSV":
+            st.download_button("Download CSV", sample_df.to_csv(index=False), "sample.csv")
 
-        lime_vals = lime_explain(model, x)
-        lime_df = pd.DataFrame({
-            "Feature": feature_labels,
-            "Importance": lime_vals
-        }).sort_values(by="Importance", key=abs, ascending=False)
+        elif format_type == "Excel":
+            sample_df.to_excel("sample.xlsx", index=False)
+            with open("sample.xlsx","rb") as f:
+                st.download_button("Download Excel", f, "sample.xlsx")
 
-        st.subheader("LIME Explanation")
-        st.bar_chart(lime_df.set_index("Feature"))
+        elif format_type == "JSON":
+            st.download_button("Download JSON",
+                               sample_df.to_json(orient="records"),
+                               "sample.json")
 
-# ---------------- INSIGHTS ----------------
-elif st.session_state.page == "Insights":
+    with col2:
+        st.markdown("### 📄 Upload File")
 
-    st.title("Insights")
-    st.info("Run prediction to generate insights.")
+        uploaded_file = st.file_uploader("", type=["csv","xlsx","json","feather","parquet"])
+
+    with col3:
+        st.markdown("### 📈 Results")
+        st.info("Upload file and run scan")
+
+    if uploaded_file is not None:
+
+        if uploaded_file.name.endswith(".csv"):
+            df = pd.read_csv(uploaded_file)
+        elif uploaded_file.name.endswith(".xlsx"):
+            df = pd.read_excel(uploaded_file)
+        elif uploaded_file.name.endswith(".json"):
+            df = pd.read_json(uploaded_file)
+        elif uploaded_file.name.endswith(".feather"):
+            df = pd.read_feather(uploaded_file)
+        elif uploaded_file.name.endswith(".parquet"):
+            df = pd.read_parquet(uploaded_file)
+
+        st.subheader("📈 Preview Data")
+        st.dataframe(df.head())
+
+        required_cols = [
+            "age","sex","cp","trestbps","chol",
+            "fbs","restecg","thalach","exang",
+            "oldpeak","slope","ca","thal"
+        ]
+
+        if not all(col in df.columns for col in required_cols):
+            st.error("Dataset must contain required columns")
+            st.stop()
+
+        if st.button("▶️ Run Scan"):
+
+            X = df[required_cols].values
+            X = (X - np.mean(X, axis=0)) / (np.std(X, axis=0) + 1e-5)
+
+            df["Risk"] = [predict(model, row) for row in X]
+
+            st.success("Scan Completed")
+            st.dataframe(df)
+
+            st.download_button("Download Results",
+                               df.to_csv(index=False),
+                               "results.csv")
